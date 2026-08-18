@@ -1,0 +1,54 @@
+on:
+  push:
+    branches: [main]
+  repository_dispatch:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */4 * * *"
+
+jobs:
+  build:
+    name: Fetch data
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        run: git clone https://github.com/${{ github.repository }}.git .
+
+      - name: Install Node.js
+        run: |
+          curl -sL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+
+      - run: npm ci
+
+      - name: Run node file
+        run: npm run build --if-present
+        env:
+          CREDENTIALS: ${{ secrets.CREDENTIALS }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET }}
+          AES_KEY: ${{ secrets.AES_KEY }}
+          AES_IV: ${{ secrets.AES_IV }}
+          HOSTS: ${{ secrets.HOSTS }}
+          PATH_URI: ${{ secrets.PATH_URI }}
+          USER_AGENT: ${{ secrets.USER_AGENT }}
+          PACKAGE: ${{ secrets.PACKAGE }}
+          VERSION: ${{ secrets.VERSION }}
+          MOBILE: ${{ secrets.MOBILE }}
+          ADSIDS: ${{ secrets.ADSIDS }}
+          DEVICE_UUID: ${{ secrets.DEVICE_UUID }}
+          DEVICE_HASHED: ${{ secrets.DEVICE_HASHED }}
+          REQUEST_TIMEOUT_MS: ${{ secrets.REQUEST_TIMEOUT_MS }}
+
+      - name: Sleep for a few seconds
+        run: sleep 10s
+
+      - name: Commit report
+        run: |
+          git config --global user.name 'mrprincewithlove'
+          git config --global user.email 'ereshjumayew@gmail.com'
+          git remote set-url origin https://x-access-token:${{ secrets.TOKEN }}@github.com/${{ github.repository }}
+
+          git add -A
+          git commit -m "Automated data update" || echo "No changes to commit"
+          git push || echo "No changes to push"
