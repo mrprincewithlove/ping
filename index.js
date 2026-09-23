@@ -26,8 +26,12 @@ function parseLine(line) {
     const parts = line.split('•');
     if (parts.length >= 7) {
         const [id, host, stats, score, ports, geo, ip] = parts;
-        const portMatch = ports.match(/(?:TCP|UDP):(\d+)/i);
-        const port = portMatch ? parseInt(portMatch[1], 10) : 443;
+        const tcpMatch = ports.match(/TCP:(\d+)/i);
+        const udpMatch = ports.match(/UDP:(\d+)/i);
+
+        const tcpPort = tcpMatch ? parseInt(tcpMatch[1], 10) : null;
+        const udpPort = udpMatch ? parseInt(udpMatch[1], 10) : null;
+        const port = tcpPort || udpPort || null;
 
         const geoParts = geo.split('~');
         const shortCountry = geoParts[0]?.trim() || '';
@@ -38,6 +42,12 @@ function parseLine(line) {
             hostname: host,
             ip: ip,
             port: port,
+            tcpPort: tcpPort,
+            udpPort: udpPort,
+            ports: {
+                tcp: tcpPort !== null,
+                udp: udpPort !== null
+            },
             info: stats,
             info2: geo,
             location: {
@@ -146,11 +156,18 @@ async function fetchData() {
         if (!body) {
             throw new Error("All hosts returned empty response");
         }
+
         const decryptedText = decryptAes(body);
         const obj = JSON.parse(decryptedText);
         const serversse = obj.serversse || "";
         const serversgp = obj.serversgp || "";
         const combined = `${serversse}\n${serversgp}`;
+        // fs.writeFileSync(path.join(process.cwd(), 'body.md'), String(body), 'utf-8');
+        // fs.writeFileSync(path.join(process.cwd(), 'decryptedText.md'), String(decryptedText), 'utf-8');
+        // fs.writeFileSync(path.join(process.cwd(), 'obj.md'), JSON.stringify(obj, null, 2), 'utf-8');
+        // fs.writeFileSync(path.join(process.cwd(), 'serversse.md'), String(serversse), 'utf-8');
+        // fs.writeFileSync(path.join(process.cwd(), 'serversgp.md'), String(serversgp), 'utf-8');
+        // fs.writeFileSync(path.join(process.cwd(), 'combined.md'), String(combined), 'utf-8');
         return combined.split('\n');
     } catch (error) {
         console.error(`Error fetching data: ${error.message}`);
